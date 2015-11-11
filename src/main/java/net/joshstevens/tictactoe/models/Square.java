@@ -5,5 +5,5 @@ package net.joshstevens.tictactoe.models;
  */
 public class Square {
 
-    public static Square EMPTY;
+    public static Square EMPTY, X, O;
 }
