@@ -2,7 +2,6 @@ package net.joshstevens.tictactoe.resources;
 
 import net.joshstevens.tictactoe.models.Game;
 import net.joshstevens.tictactoe.models.Move;
-import net.joshstevens.tictactoe.models.Square;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -10,6 +9,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -19,9 +19,10 @@ import java.util.stream.Collectors;
  *
  * This file describes the "/boards" endpoint.
  *
+ * A user can GET "/boards" which will show a list of boards.
  * A user can POST to "/boards" which will create a new board.
  * A user can GET "/boards/{gameID}" which will show them that board and tell them whose turn it is.
- * A user can GET "/boards" which will show a list of boards.
+ *
  */
 
 @Path("/boards")
@@ -32,18 +33,12 @@ public class BoardsResource {
     private List<Game> games = new ArrayList<Game>();
     private AtomicInteger newId = new AtomicInteger();
 
-    @POST
-    public Response createBoard() {
-        // Create new game board
-        int id = newId.incrementAndGet();
-        Game game = new Game(id);
-        games.add(game);
-        return Response.created(new GameResource(game, uriInfo).getUri()).build();
-    }
-
     @GET
     @Produces("application/json")
     public List<String> getBoards() {
+        if (games.size() == 0) {
+            return Collections.singletonList("No games exist. Send a POST to this endpoint to create one.");
+        }
         return games.stream()
                 .map(game -> new GameResource(game, uriInfo))
                 .map(GameResource::getUri)
@@ -51,58 +46,54 @@ public class BoardsResource {
                 .collect(Collectors.toList());
     }
 
+    @POST
+    public Response createBoard() {
+        // Create new game board
+        int id = newId.incrementAndGet();
+        Game game = new Game(id);
+        games.add(game);
+        URI gameURI = new GameResource(game, uriInfo).getUri();
+        return Response.created(gameURI).entity("Game created at " + gameURI.toString() + "\n").build();
+    }
+
     @Path("{id}")
     @GET
     @Produces("text/plain")
     public String getGame(@PathParam("id") int id) {
         StringBuilder board = new StringBuilder("Game ID does not exist.\n");
-        Square[][] gameBoard = games.get(id-1).getBoard();
+        if (id-1 >= games.size()) return board.toString();
 
-        // Check for non existent game.
-        GameResource reqGame = games.stream()
-                                .filter(game -> id == game.getId())
-                                .findFirst()
-                                .map(game -> new GameResource(game, uriInfo))
-                                .orElse(null);
-        if (reqGame == null) return board.toString();
+        Game reqGame = games.get(id-1);
 
-        // Game exists, construct response string.
-        board.delete(0,24);
-        for (Square[] row : gameBoard) {
-            if (row[0] == Square.EMPTY) board.append(" |");
-            else if (row[0] == Square.X) board.append("X|");
-            else board.append("O|");
+        /* Game exists, construct response string. First, delete the "Game ID does not exist.\n" string.
+         * Then, call parseBoard(), and convert StringBuilder to String. */
 
-            if (row[1] == Square.EMPTY) board.append(" |");
-            else if (row[1] == Square.X) board.append("X|");
-            else board.append("O|");
-
-            if (row[2] == Square.EMPTY) board.append(" \n");
-            else if (row[2] == Square.X) board.append("X\n");
-            else board.append("O\n");
-
-            board.append("-----\n");
-        }
-        board.delete(30,37);
-        board.append("Next player: " + reqGame.currentPlayer + "\n");
-
-
-        return board.toString();
+        return board.delete(0,24).append(reqGame.parseBoard()).toString();
     }
 
     @Path("{id}")
     @POST
     @Consumes("application/json")
     public Response attemptMove(Move moveRequest, @PathParam("id") int id) {
-        int row = moveRequest.row;
-        int col = moveRequest.col;
         Response r;
-        Game reqGame = games.get(id-1);
-        if (reqGame.checkSquare(row, col)) {
-            reqGame.makeMove(row, col);
-            r = Response.status(201).entity("Move completed.").build();
+        if (id-1 >= games.size()) {
+            r = Response.status(404).entity("Game ID does not exist.\n").build();
         } else {
-            r = Response.status(409).entity("That square is occupied.").build();
+            Game reqGame = games.get(id-1);
+            try {
+                int row = moveRequest.row;
+                int col = moveRequest.col;
+                
+                if (reqGame.checkSquare(row, col)) {
+                    reqGame.makeMove(row, col);
+                    r = Response.status(201).entity(reqGame.parseBoard()).build();
+                } else {
+                    r = Response.status(409).entity("\nThat square is occupied.\n\n" + reqGame.parseBoard()).build();
+                }
+            } catch (ArrayIndexOutOfBoundsException e) {
+                r = Response.status(400).entity("\nThat square is out of bounds.\n\n" + reqGame.parseBoard()).build();
+            }
+
         }
 
         return r;
