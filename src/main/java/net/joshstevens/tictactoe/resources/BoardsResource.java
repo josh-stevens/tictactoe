@@ -40,9 +40,7 @@ public class BoardsResource {
             return Collections.singletonList("No games exist. Send a POST to this endpoint to create one.");
         }
         return games.stream()
-                .map(game -> new GameResource(game, uriInfo))
-                .map(GameResource::getUri)
-                .map(URI::toString)
+                .map(game -> new GameResource(game, uriInfo).getUri().toString())
                 .collect(Collectors.toList());
     }
 
@@ -75,27 +73,36 @@ public class BoardsResource {
     @POST
     @Consumes("application/json")
     public Response attemptMove(Move moveRequest, @PathParam("id") int id) {
+        /*
+           A lot of exceptions to this function. Probably should be written as custom exceptions to
+           look cleaner? Have to first check that the game exists, then check that the game is still
+           in progress, then make sure the specified move is in bounds, then make sure that the square
+           isn't already occupied. Worst of all, if they format the POST request incorrectly, they get
+           a really awful 400 response that I need to catch somehow.
+        */
         Response r;
         if (id-1 >= games.size()) {
             r = Response.status(404).entity("Game ID does not exist.\n").build();
         } else {
             Game reqGame = games.get(id-1);
-            try {
-                int row = moveRequest.row;
-                int col = moveRequest.col;
-                
-                if (reqGame.checkSquare(row, col)) {
-                    reqGame.makeMove(row, col);
-                    r = Response.status(201).entity(reqGame.parseBoard()).build();
-                } else {
-                    r = Response.status(409).entity("\nThat square is occupied.\n\n" + reqGame.parseBoard()).build();
+            if (!reqGame.checkProgress()) {
+                r = Response.status(409).entity("\nThe game is over!\n\n" + reqGame.parseBoard()).build();
+            } else {
+                try {
+                    int row = moveRequest.row;
+                    int col = moveRequest.col;
+
+                    if (reqGame.checkSquare(row, col)) {
+                        reqGame.makeMove(row, col);
+                        r = Response.status(201).entity(reqGame.parseBoard()).build();
+                    } else {
+                        r = Response.status(409).entity("\nThat square is occupied.\n\n" + reqGame.parseBoard()).build();
+                    }
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    r = Response.status(400).entity("\nThat square is out of bounds.\n\n" + reqGame.parseBoard()).build();
                 }
-            } catch (ArrayIndexOutOfBoundsException e) {
-                r = Response.status(400).entity("\nThat square is out of bounds.\n\n" + reqGame.parseBoard()).build();
             }
-
         }
-
         return r;
     }
 }
