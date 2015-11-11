@@ -17,10 +17,12 @@ import java.net.URI;
 public class GameResource {
     private final Game game;
     private final UriInfo uriInfo;
+    public String currentPlayer;
 
     public GameResource(Game game, UriInfo uriInfo) {
         this.game = game;
         this.uriInfo = uriInfo;
+        this.currentPlayer = "X";
     }
 
     @GET

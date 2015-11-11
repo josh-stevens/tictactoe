@@ -59,10 +59,8 @@ public class BoardsResource {
                                 .findFirst()
                                 .map(game -> new GameResource(game, uriInfo))
                                 .orElse(null);
-        if (reqGame == null) return "null";
-        return "\t|\t|\t\n\t|\t|\t\n\t|\t|\t\n-------------------------\n" +
-                "\t|\t|\t\n\t|\t|\t\n\t|\t|\t\n-------------------------\n" +
-                "\t|\t|\t\n\t|\t|\t\n\t|\t|\t\n";
+        if (reqGame == null) return "Game ID does not exist.\n";
+        return " | | \n-----\n | | \n-----\n | | \nNext player: " + reqGame.currentPlayer + "\n";
 
     }
 }
