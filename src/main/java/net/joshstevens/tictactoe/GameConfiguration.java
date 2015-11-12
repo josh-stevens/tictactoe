@@ -1,6 +1,6 @@
 package net.joshstevens.tictactoe;
 
-import com.yammer.dropwizard.config.Configuration;
+import io.dropwizard.Configuration;
 
 /**
  * Created by joshstevens on 11/8/15.
