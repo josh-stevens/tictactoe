@@ -19,12 +19,12 @@ To create a game board:
 curl -X POST http://localhost:8080/boards/
 ```
 
-To look at a game board without making a move (replace <id> with the board number):
+To look at a game board without making a move (replace \<id\> with the board number):
 ```
 curl -X GET http://localhost:8080/boards/<id>
 ```
 
-To make a move, replace <id> with the board number, and <row> and <col> with the row and column you are picking:
+To make a move, replace <id> with the board number, and \<row\> and \<col\> with the row and column you are picking:
 ```
 curl -H "Content-Type: application/json" -X POST -d '{"row":"<row>","col":"<col>"}' http://localhost:8080/boards/<id>
 ```
